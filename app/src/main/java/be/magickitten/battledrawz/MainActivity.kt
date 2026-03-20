@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
 fun Greeting(modifier: Modifier = Modifier) {
     // Get the current context to access resources and create MediaPlayer
     val context = LocalContext.current
-
+    val sounds = listOf(R.raw.meow_1, R.raw.meow_2, R.raw.meow_3)
     Box(
         modifier = modifier.fillMaxSize(), // Ensure the Box fills the available space
         contentAlignment = Alignment.Center // Center the image within the Box
@@ -52,7 +52,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                 .fillMaxSize() // Make the image fill the entire Box
                 .clickable {
                     // Create and start MediaPlayer when the image is clicked
-                    val mediaPlayer = MediaPlayer.create(context, R.raw.meow_1) // Replace 'my_sound' with your actual sound file name
+                    val mediaPlayer = MediaPlayer.create(context, sounds.random()) // Replace 'my_sound' with your actual sound file name
                     mediaPlayer?.start()
 
                     // Optional: Release the MediaPlayer resources after playback to prevent memory leaks
