@@ -8,6 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -30,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import be.magickitten.battledrawz.ui.theme.MewMakerTheme
+import kotlin.random.Random
 
 const val angle=5f
 class MainActivity : ComponentActivity() {
@@ -60,6 +63,38 @@ fun Greeting(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
 
+    fun shake() {
+        scope.launch {
+            rotation.animateTo(angle, tween(100, easing = LinearOutSlowInEasing))
+            rotation.animateTo(-angle, tween(100, easing = LinearOutSlowInEasing))
+            rotation.animateTo(angle, tween(100, easing = LinearOutSlowInEasing))
+            rotation.animateTo(0f, tween(100)) // Return to center
+        }
+    }
+
+    val translationY = remember { Animatable(0f) }
+
+    fun bounce() {
+        scope.launch {
+            // 2. Upward movement (snappy)
+            translationY.animateTo(
+                targetValue = -100f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+            // 3. Return to ground (bouncy)
+            translationY.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        }
+    }
+
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -70,7 +105,10 @@ fun Greeting(modifier: Modifier = Modifier) {
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer(rotationZ = rotation.value)
+                .graphicsLayer(
+                    rotationZ = rotation.value,
+                    translationY = translationY.value
+                )
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown()
@@ -101,11 +139,10 @@ fun Greeting(modifier: Modifier = Modifier) {
                             val mediaPlayer = MediaPlayer.create(context, sounds.random())
                             mediaPlayer?.start()
                             mediaPlayer?.setOnCompletionListener { it.release() }
-                            scope.launch {
-                                rotation.animateTo(angle, tween(100, easing = LinearOutSlowInEasing))
-                                rotation.animateTo(-angle, tween(100, easing = LinearOutSlowInEasing))
-                                rotation.animateTo(angle, tween(100, easing = LinearOutSlowInEasing))
-                                rotation.animateTo(0f, tween(100)) // Return to center
+                            if (Random.nextBoolean()) {
+                                shake()
+                            } else {
+                                bounce()
                             }
                         }
                     }
