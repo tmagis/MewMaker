@@ -78,7 +78,7 @@ fun Greeting(modifier: Modifier = Modifier) {
         scope.launch {
             // 2. Upward movement (snappy)
             translationY.animateTo(
-                targetValue = -100f,
+                targetValue = -200f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioLowBouncy,
                     stiffness = Spring.StiffnessLow
@@ -93,6 +93,11 @@ fun Greeting(modifier: Modifier = Modifier) {
                 )
             )
         }
+    }
+
+    fun play(mediaPlayer: MediaPlayer?) {
+        mediaPlayer?.start()
+        mediaPlayer?.setOnCompletionListener { it.release() }
     }
 
     Box(
@@ -112,15 +117,9 @@ fun Greeting(modifier: Modifier = Modifier) {
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown()
-
-                        // 2. Use 'scope.launch' instead of just 'launch'
-
-
                         val timerJob = withTimeoutOrNull(3000L) {
                             waitForUpOrCancellation()
                         }
-
-
                         val eggPlayer = MediaPlayer.create(context, R.raw.meow_egg)
                         if (timerJob == null) {
                             scope.launch {
@@ -132,13 +131,11 @@ fun Greeting(modifier: Modifier = Modifier) {
                                     )
                                 )
                             }
-                            eggPlayer?.start()
-                            eggPlayer?.setOnCompletionListener { it.release() }
+                            play(eggPlayer)
                             down.consume()
                         } else {
                             val mediaPlayer = MediaPlayer.create(context, sounds.random())
-                            mediaPlayer?.start()
-                            mediaPlayer?.setOnCompletionListener { it.release() }
+                            play(mediaPlayer)
                             if (Random.nextBoolean()) {
                                 shake()
                             } else {
