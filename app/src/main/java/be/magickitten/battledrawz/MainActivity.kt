@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                     Greeting(
                         modifier = Modifier
                             .padding(innerPadding)
-                            .fillMaxSize()
+                            .fillMaxSize(),
                     )
                 }
             }
@@ -81,7 +81,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                 targetValue = -200f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
+                    stiffness = Spring.StiffnessLow,
                 )
             )
             // 3. Return to ground (bouncy)
@@ -89,7 +89,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                 targetValue = 0f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
+                    stiffness = Spring.StiffnessLow,
                 )
             )
         }
@@ -120,13 +120,13 @@ fun Greeting(modifier: Modifier = Modifier) {
                         val timerJob = withTimeoutOrNull(3000L) {
                             waitForUpOrCancellation()
                         }
-                        val eggPlayer = MediaPlayer.create(context, R.raw.meow_egg)
                         if (timerJob == null) {
+                            val eggPlayer = MediaPlayer.create(context, R.raw.meow_egg)
                             scope.launch {
                                 rotation.animateTo(
                                     targetValue = 360f,
                                     animationSpec = tween(
-                                        durationMillis = eggPlayer.duration,
+                                        durationMillis = eggPlayer?.duration ?: 0,
                                         easing = LinearEasing
                                     )
                                 )
