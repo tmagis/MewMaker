@@ -9,10 +9,10 @@ android {
 
     defaultConfig {
         applicationId = "be.magickitten.battledrawz"
-        minSdk = 35
+        minSdk = 37
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.8"
+        versionCode = 20
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
