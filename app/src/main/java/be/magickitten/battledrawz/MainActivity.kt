@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -30,7 +31,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import be.magickitten.battledrawz.ui.theme.MewMakerTheme
 import kotlin.random.Random
 
@@ -42,7 +42,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             MewMakerTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Pass the Modifier with padding and fillMaxSize to Greeting
                     Greeting(
                         modifier = Modifier
                             .padding(innerPadding)
@@ -57,47 +56,62 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val sounds = listOf(R.raw.meow_1, R.raw.meow_2, R.raw.meow_3, R.raw.meow_4)
 
-    // 1. Create a CoroutineScope that we can use inside the gesture block
+    // 1. SoundPool pour les sons courts
+    val soundPool = remember {
+        android.media.SoundPool.Builder().setMaxStreams(4).build()
+    }
+    val soundIds = remember {
+        listOf(
+            soundPool.load(context, R.raw.meow_1, 1),
+            soundPool.load(context, R.raw.meow_2, 1),
+            soundPool.load(context, R.raw.meow_3, 1),
+            soundPool.load(context, R.raw.meow_4, 1)
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            soundPool.release()
+        }
+    }
+
     val scope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
+    val translationY = remember { Animatable(0f) }
+
+    val scale = remember { Animatable(1f) } // Initial scale at 100%
+
+    val zoomOutFactor = 0.90f // Zoom arrière à 90% de la taille
+    val zoomInFactor = 1.10f  // Zoom avant à 110% de la taille
+
+    fun pulse() {
+        scope.launch {
+            // Cycle 1
+            scale.animateTo(zoomOutFactor, tween(100, easing = LinearOutSlowInEasing))
+            scale.animateTo(zoomInFactor, tween(150, easing = LinearOutSlowInEasing))
+
+            // Cycle 2
+            scale.animateTo(zoomOutFactor, tween(100, easing = LinearOutSlowInEasing))
+            scale.animateTo(1f, tween(150, easing = LinearOutSlowInEasing)) // Return to normal
+        }
+    }
+    // ---------------------------------
 
     fun shake() {
         scope.launch {
             rotation.animateTo(angle, tween(100, easing = LinearOutSlowInEasing))
             rotation.animateTo(-angle, tween(100, easing = LinearOutSlowInEasing))
             rotation.animateTo(angle, tween(100, easing = LinearOutSlowInEasing))
-            rotation.animateTo(0f, tween(100)) // Return to center
+            rotation.animateTo(0f, tween(100))
         }
     }
-
-    val translationY = remember { Animatable(0f) }
 
     fun bounce() {
         scope.launch {
-            // 2. Upward movement (snappy)
-            translationY.animateTo(
-                targetValue = -200f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow,
-                )
-            )
-            // 3. Return to ground (bouncy)
-            translationY.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow,
-                )
-            )
+            translationY.animateTo(-200f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow))
+            translationY.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
         }
-    }
-
-    fun play(mediaPlayer: MediaPlayer?) {
-        mediaPlayer?.start()
-        mediaPlayer?.setOnCompletionListener { it.release() }
     }
 
     Box(
@@ -112,7 +126,10 @@ fun Greeting(modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .graphicsLayer(
                     rotationZ = rotation.value,
-                    translationY = translationY.value
+                    translationY = translationY.value,
+                    // APPLICATION DE L'ANIMATION DE ZOOM
+                    scaleX = scale.value,
+                    scaleY = scale.value
                 )
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -120,38 +137,34 @@ fun Greeting(modifier: Modifier = Modifier) {
                         val timerJob = withTimeoutOrNull(3000L) {
                             waitForUpOrCancellation()
                         }
+
                         if (timerJob == null) {
+                            // 2. Retour au MediaPlayer pour le son long
                             val eggPlayer = MediaPlayer.create(context, R.raw.meow_egg)
+                            eggPlayer?.start()
+                            eggPlayer?.setOnCompletionListener { it.release() }
+
                             scope.launch {
                                 rotation.animateTo(
                                     targetValue = 360f,
-                                    animationSpec = tween(
-                                        durationMillis = eggPlayer?.duration ?: 0,
-                                        easing = LinearEasing
-                                    )
+                                    animationSpec = tween(durationMillis = eggPlayer?.duration ?: 2000, easing = LinearEasing)
                                 )
                             }
-                            play(eggPlayer)
                             down.consume()
                         } else {
-                            val mediaPlayer = MediaPlayer.create(context, sounds.random())
-                            play(mediaPlayer)
-                            if (Random.nextBoolean()) {
-                                shake()
-                            } else {
-                                bounce()
+                            // 3. SoundPool pour les clics normaux
+                            soundPool.play(soundIds.random(), 1f, 1f, 1, 0, 1f)
+
+                            // SÉLECTION ALÉATOIRE PARMI LES 3 ANIMATIONS
+                            val randomAnim = Random.nextInt(3)
+                            when (randomAnim) {
+                                0 -> shake()
+                                1 -> bounce()
+                                2 -> pulse() // La nouvelle animation de zoom
                             }
                         }
                     }
                 }
         )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MewMakerTheme {
-        Greeting()
     }
 }
