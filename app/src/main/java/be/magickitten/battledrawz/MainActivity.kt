@@ -57,7 +57,6 @@ class MainActivity : ComponentActivity() {
 fun Greeting(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
-    // 1. SoundPool pour les sons courts
     val soundPool = remember {
         android.media.SoundPool.Builder().setMaxStreams(4).build()
     }
@@ -77,26 +76,21 @@ fun Greeting(modifier: Modifier = Modifier) {
     }
 
     val scope = rememberCoroutineScope()
-    val rotation = remember { Animatable(0f) }
+    val rotation = remember { Animatable(0f) } // rotationZ
     val translationY = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
 
-    val scale = remember { Animatable(1f) } // Initial scale at 100%
-
-    val zoomOutFactor = 0.90f // Zoom arrière à 90% de la taille
-    val zoomInFactor = 1.10f  // Zoom avant à 110% de la taille
+    // --- NOUVELLE VARIABLE : ROTATION Y ---
+    val rotationY = remember { Animatable(0f) }
 
     fun pulse() {
         scope.launch {
-            // Cycle 1
-            scale.animateTo(zoomOutFactor, tween(100, easing = LinearOutSlowInEasing))
-            scale.animateTo(zoomInFactor, tween(150, easing = LinearOutSlowInEasing))
-
-            // Cycle 2
-            scale.animateTo(zoomOutFactor, tween(100, easing = LinearOutSlowInEasing))
-            scale.animateTo(1f, tween(150, easing = LinearOutSlowInEasing)) // Return to normal
+            scale.animateTo(0.90f, tween(100, easing = LinearOutSlowInEasing))
+            scale.animateTo(1.10f, tween(150, easing = LinearOutSlowInEasing))
+            scale.animateTo(0.90f, tween(100, easing = LinearOutSlowInEasing))
+            scale.animateTo(1f, tween(150, easing = LinearOutSlowInEasing))
         }
     }
-    // ---------------------------------
 
     fun shake() {
         scope.launch {
@@ -114,6 +108,16 @@ fun Greeting(modifier: Modifier = Modifier) {
         }
     }
 
+    // --- NOUVELLE ANIMATION : TOUPIE ---
+    fun spin() {
+        scope.launch {
+            // Tourne à 360 degrés
+            rotationY.animateTo(360f, tween(2000, easing = LinearOutSlowInEasing))
+            // Réinitialise instantanément à 0 sans animation pour le prochain clic
+            rotationY.snapTo(0f)
+        }
+    }
+
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -127,9 +131,10 @@ fun Greeting(modifier: Modifier = Modifier) {
                 .graphicsLayer(
                     rotationZ = rotation.value,
                     translationY = translationY.value,
-                    // APPLICATION DE L'ANIMATION DE ZOOM
                     scaleX = scale.value,
-                    scaleY = scale.value
+                    scaleY = scale.value,
+                    // APPLICATION DE LA ROTATION Y
+                    rotationY = rotationY.value
                 )
                 .pointerInput(Unit) {
                     awaitEachGesture {
@@ -139,7 +144,6 @@ fun Greeting(modifier: Modifier = Modifier) {
                         }
 
                         if (timerJob == null) {
-                            // 2. Retour au MediaPlayer pour le son long
                             val eggPlayer = MediaPlayer.create(context, R.raw.meow_egg)
                             eggPlayer?.start()
                             eggPlayer?.setOnCompletionListener { it.release() }
@@ -152,15 +156,14 @@ fun Greeting(modifier: Modifier = Modifier) {
                             }
                             down.consume()
                         } else {
-                            // 3. SoundPool pour les clics normaux
                             soundPool.play(soundIds.random(), 1f, 1f, 1, 0, 1f)
 
-                            // SÉLECTION ALÉATOIRE PARMI LES 3 ANIMATIONS
-                            val randomAnim = Random.nextInt(3)
-                            when (randomAnim) {
+                            // CHOIX PARMI LES 4 ANIMATIONS
+                            when (Random.nextInt(4)) {
                                 0 -> shake()
                                 1 -> bounce()
-                                2 -> pulse() // La nouvelle animation de zoom
+                                2 -> pulse()
+                                3 -> spin() // Déclenche le flip
                             }
                         }
                     }
